@@ -1,0 +1,114 @@
+# pyproject.toml documentation for reference:
+#   https://packaging.python.org/en/latest/
+#   https://setuptools.pypa.io/en/latest/userguide/
+
+[project]
+name          = "visidata_pdr"
+version       = "0.0.1"
+description   = "Load tabular data understood by PDR into VisiData"
+readme        = "README.md"
+license       = "BSD-3-Clause"
+license-files = ["LICENSE.md"]
+
+authors = [
+    { name = "Zack Weinberg",     email = "zack@millionconcepts.com"     },
+]
+
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Environment :: Console :: Curses",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+requires-python = ">=3.11"
+dependencies = [
+    "pdr",
+    "visidata >= 2"
+]
+
+[project.urls]
+Repository = "https://github.com/MillionConcepts/visidata-pdr"
+
+[project.entry-points."visidata.plugins"]
+visidata_pdr = "visidata_pdr.visidata_pdr"
+
+
+[build-system]
+requires = ["setuptools >= 77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Keep this list in sync with the type checker configuration below.
+include = [
+    "visidata_pdr",
+    "visidata_pdr.*",
+]
+namespaces=false
+where = ["."]
+
+
+# Recommended for new projects by pytest manual.
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib"
+]
+
+## Lint configuration
+[tool.ruff]
+# These need to agree with .editorconfig
+line-length = 80
+indent-width = 4
+# This needs to agree with the requires-python line
+target-version = "py311"
+# Files that should not be linted.  Put a short explanatory comment
+# above each.
+exclude = [
+]
+
+[tool.ruff.lint]
+# There are lots more checks ruff can do but this is a sensible default.
+# Unfortunately, many of the other lint groups combine high-value checks
+# with much lower-value or purely stylistic checks.
+#
+# To facilitate maintenance, this list should be kept in the same order
+# as the list of groups in <https://docs.astral.sh/ruff/rules/>.
+select = [
+    # "ANN",    # missing type annotations (visidata and pdr are both untyped)
+    "FBT",      # forbid boolean positional arguments (keyword args are ok)
+    "RET",      # missing return values
+    # "TC",     # debatable rules about type-only imports
+    "SIM115",   # open() without 'with' block (other SIM checks are debatable)
+    "NPY",      # warns about deprecated NumPy APIs
+    "PD",       # warns about deprecated Pandas APIs
+    "PT",       # warns about a variety of easy mistakes when writing tests
+    "E1",       # inconsistent indentation (stylistic but very important)
+    # "E2",     # purely stylistic rules about whitespace around operators
+    # "E3",     # purely stylistic rules about blank lines
+    "E4",       # import-related mistakes
+    "E5",       # backslash-related mistakes
+    # "E6",     # there are no E6xx rules
+    "E7",       # more code that can be simplified,
+    # "E8",     # there are no E8xx rules
+    "E9",       # I/O errors while running ruff
+    "W",        # mostly whitespace errors; also, invalid \-escapes in strings
+    "F",        # grab bag of constructs that are almost certainly wrong
+    "PGH",      # no blanket lint annotations
+]
+ignore = [
+    # stylistic rule (line length) lumped in with E5
+    "E501",
+    # better addressed by not using fonts in which l/I/1 or 0/O are
+    # visually ambiguous
+    "E741",
+    # stylistic rule lumped with RET ("never use 'else' after an
+    # if block ending with a 'return'"; in many cases the version
+    # with the 'else' is easier to read)
+    "RET505",
+    # stylistic rule (line length in docstrings) lumped in with W
+    "W505",
+]
