@@ -2,59 +2,48 @@
 Load tabular data into VisiData using PDR
 """
 
-from visidata import VisiData, Column, Progress, TableSheet, TextSheet
+from pathlib import Path
+
+from visidata import (
+    VisiData, Column, Progress, TableSheet, TextSheet, asyncthread
+)
 from visidata.loaders._pandas import PandasSheet
 from visidata.loaders.npy import NpySheet
 
 
-class LazyPDRSource:
+class PDRSource:
     """
-    Mixin class that makes any sheet's .source property lazily load
-    from a pdr.Data object.  To use, inherit from this, then *don't*
-    pass source= to the constructor and *do* pass _pdr_data=
-    and _pdr_key= arguments.
+    Object to be used as the .source of one of the Lazy sheets below.
+    get() loads the relevant data only when needed.
     """
 
-    def __init__(self, *args, **kwargs):
-        if 'source' in kwargs:
-            raise ValueError("do not specify source= for a lazy source")
-        if '_pdr_source' in kwargs:
-            raise ValueError("do not specify _pdr_source= for a lazy source")
-        if '_pdr_data' not in kwargs:
-            raise ValueError("must specify _pdr_data= for a lazy source")
-        if '_pdr_key' not in kwargs:
-            raise ValueError("must specify _pdr_key= for a lazy source")
+    def __init__(self, container, key):
+        self.container = container
+        self.key = key
+        self.data = None
 
-        self._pdr_source = None
-        self._pdr_data = kwargs.pop("_pdr_data")
-        self._pdr_key = kwargs.pop("_pdr_key")
-        super().__init__(*args, **kwargs)
+    def get(self):
+        if self.data is None:
+            self.data = self.container[self.key]
+        return self.data
 
-    @property
-    def source(self):
-        if self._pdr_source is None:
-            # indexing pdr.Data does a lazy load of the object
-            self._pdr_source = self._pdr_data[self._pdr_key]
-        return self._pdr_source
-
-    @source.setter
-    def source(self, val):
-        self._pdr_source = val
+    def __str__(self):
+        return f"pdr.Data({self.container.filename!r}).{self.key}"
 
 
-class LazyTableSheet(TableSheet, LazyPDRSource):
-    pass
+class LazyTextSheet(TextSheet):
+    def iterload(self):
+        yield from self.readlines(self.source.get())
 
 
-class LazyTextSheet(TextSheet, LazyPDRSource):
-    pass
+class LazyNpySheet(NpySheet):
+    def iterload(self):
+        if not hasattr(self, 'npy'):
+            self.npy = self.source.get()
+        return super().iterload()
 
 
-class LazyNpySheet(NpySheet, LazyPDRSource):
-    pass
-
-
-class LazyPandasSheet(PandasSheet, LazyPDRSource):
+class LazyPandasSheet(PandasSheet):
     def dtype_to_type(self, dtype):
         """
         Patch PandasSheet with a workaround for
@@ -65,6 +54,13 @@ class LazyPandasSheet(PandasSheet, LazyPDRSource):
         if isinstance(dtype, pd.Series):
             return super().dtype_to_type(dtype.dtype)
         return super().dtype_to_type(dtype)
+
+    @asyncthread
+    def reload(self):
+        self._pdr_source = self.source
+        self.source = self.source.get()
+        # we're already in an async thread
+        PandasSheet.reload.__wrapped__(self)
 
 
 def a_type(thing):
@@ -123,12 +119,17 @@ def sheet_class_for_obj(vd, stem, key, source):
             )
             return None
 
+        # In this case, guess that we're going to get a table if the
+        # HDU's metadata has a "COLUMNS" key, and an image if it doesn't.
         case "Fits":
+            md = source.metadata[key]
+            return LazyPandasSheet if "COLUMNS" in md else LazyNpySheet
+
+        case other:
             vd.warning(
                 f"{stem}/{key}: not yet implemented: sheet type {ldr}"
             )
             return None
-
 
 class PDSMetaSheet(TableSheet):
     rowtype = "label metadata"  # rowdef: (str, any)
@@ -139,8 +140,14 @@ class PDSMetaSheet(TableSheet):
 
     def beforeLoad(self):
         for key in sorted(self.source.keys()):
-            if key.upper() in ("LABEL", "HEADER"):
+            # Skip all "header" objects; they are covered by the "label" sheet.
+            if (
+                key.upper() in ("LABEL", "HEADER")
+                or key not in self.source.metadata
+                or "HEADER_TYPE" in self.source.metadata[key]
+            ):
                 continue
+
             if self.source._target_path(key) is None:
                 self.vd.warning(
                     f"data not available for {self._pdr_stem}/{key}"
@@ -157,28 +164,68 @@ class PDSMetaSheet(TableSheet):
                 self.vd.push(
                     SheetClass(
                         f"{self._pdr_stem}/{key}",
-                        _pdr_data=self.source,
-                        _pdr_key=key
+                        source=PDRSource(self.source, key)
                     ),
                     load=False
                 )
         self.vd.push(self)
 
     def iterload(self):
-        yield from self.source.metadata.items()
+        def il_recursive(md, base):
+            if hasattr(md, 'items'):
+                for k, v in md.items():
+                    yield from il_recursive(v, f"{base}.{k}")
+            elif isinstance(md, list):
+                for i, v in enumerate(v):
+                    yield from il_recursive(v, f"{base}[{i}]")
+            else:
+                yield (base, md)
+
+        for k, v in self.source.metadata.items():
+            yield from il_recursive(v, k)
 
 
 @VisiData.api
 def open_pdr(vd, p):
     pdr = vd.importExternal("pdr")
 
-    data = pdr.open(p)
+    try:
+        # vd -f pdr accepts either an actual pathname of something that's
+        # readable by PDR, in which case everything in that file is read
+        # (as multiple sheets, if necessary)...
+        data = pdr.open(p)
+        stem = p.base_stem
+        key = None
+
+    except NotADirectoryError:
+        # ... or an actual pathname of something that's readable by PDR
+        # with "/sub-object-name" tacked on the end, in which case only that
+        # specific sub-object is loaded.  When the user does that, the initial
+        # call to pdr.open will fail with an ENOTDIR error.
+        pp = p.parent
+        data = pdr.open(pp)
+        stem = pp.base_stem
+        # There seems to be a bug in visidata.Path where the .name property
+        # omits suffixes (that's supposed to be .stem).
+        key = p.parts[-1]
+
     if data.standard == "PDS4":
         vd.fail(
             f"sorry, not implemented: "
-            f"loading {p.base_stem}, whose label format is {data.standard}"
+            f"loading {stem}, whose label format is {data.standard}"
         )
 
-    return PDSMetaSheet(f"{p.base_stem}/metadata",
-                        source=data,
-                        _pdr_stem=p.base_stem)
+    if key is None:
+        return PDSMetaSheet(
+            f"{stem}/metadata",
+            source=data,
+            _pdr_stem=stem,
+        )
+    else:
+        SheetClass = sheet_class_for_obj(vd, stem, key, data)
+        if SheetClass is None:
+            vd.fail(f"{stem}/{key}: loading failed due to earlier errors")
+        return SheetClass(
+            f"{stem}/{key}",
+            source=PDRSource(data, key),
+        )
