@@ -27,8 +27,9 @@ classifiers = [
 
 requires-python = ">=3.11"
 dependencies = [
-    "pdr",
-    "visidata >= 2"
+    # currently we need an unreleased PDR due to use of Data.type_of
+    "pdr @ git+https://github.com/MillionConcepts/pdr@develop",
+    "visidata >= 3.3"
 ]
 
 [project.urls]
@@ -43,7 +44,6 @@ requires = ["setuptools >= 77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-# Keep this list in sync with the type checker configuration below.
 include = [
     "visidata_pdr",
     "visidata_pdr.*",
@@ -51,12 +51,6 @@ include = [
 namespaces=false
 where = ["."]
 
-
-# Recommended for new projects by pytest manual.
-[tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib"
-]
 
 ## Lint configuration
 [tool.ruff]

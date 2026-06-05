@@ -9,6 +9,44 @@ from visidata.loaders._pandas import PandasSheet
 from visidata.loaders.npy import NpySheet
 
 
+def a_type(thing):
+    """
+    Return the name of the type of 'thing', with the correct
+    English indefinite article prepended and some of Python's
+    cryptic abbreviations expanded, e.g. 'a string', 'an integer'.
+
+    If 'thing' is already a type object, uses the name of 'thing'
+    itself, not the name of type(thing) (which would always be "type").
+    """
+    if isinstance(thing, type):
+        name = thing.__name__
+    else:
+        name = type(thing).__name__
+
+    name = ({
+        "str":           "string",
+        "bool":          "boolean",
+        "int":           "integer",
+        "float":         "real number",
+        "dict":          "dictionary",
+        "ndarray":       "numpy array",
+        "NoneType":      "None",
+    }).get(name, name)
+
+    # None is unique and therefore doesn't take any articles at all.
+    if name == "None":
+        return name
+
+    # Technically, "an" should be used if the word begins with a vowel
+    # *sound*, whether or not it begins with a vowel *letter*.
+    # However, determining this accurately is difficult: to give just
+    # one example, it should be "a numpy array" but "an ndarray".
+    # Approximating based on the usual vowel letters is Good Enough For Now.
+    # (The rule is also accent-dependent, but that almost exclusively affects
+    # words beginning with H and I can't think of any that would come up.)
+    return ("an " if name[0] in "aeiouAEIOU" else "a ") + name
+
+
 class PDRSource:
     """
     Object to be used as the .source of one of the Lazy sheets below.
@@ -31,13 +69,32 @@ class PDRSource:
 
 class LazyTextSheet(TextSheet):
     def iterload(self):
-        yield from self.readlines(self.source.get())
+        if not hasattr(self, "_lines"):
+            lines = self.source.get()
+            if isinstance(lines, str):
+                lines = lines.splitlines()
+            elif isinstance(lines, list):
+                if not all(isinstance(l, str) for l in lines):
+                    self.vd.fail("LazyTextSheet: source is a list but"
+                                 " some of its items are not strings")
+            else:
+                self.vd.fail(f"LazyTextSheet: source is {a_type(lines)}"
+                             " (expected a string or list of strings)")
+            self._lines = lines
+
+        yield from self.readlines(self._lines)
 
 
 class LazyNpySheet(NpySheet):
     def iterload(self):
-        if not hasattr(self, 'npy'):
-            self.npy = self.source.get()
+        if not hasattr(self, "npy"):
+            np = self.vd.importExternal("numpy")
+            npy = self.source.get()
+            if not isinstance(npy, np.ndarray):
+                self.vd.fail(f"LazyNpySheet: source is {a_type(npy)}"
+                             " (expected a numpy array)")
+            self.npy = npy
+
         return super().iterload()
 
 
@@ -55,79 +112,71 @@ class LazyPandasSheet(PandasSheet):
 
     @asyncthread
     def reload(self):
-        self._pdr_source = self.source
-        self.source = self.source.get()
+        if not hasattr(self, '_pdr_source'):
+            pd = self.vd.importExternal("pandas")
+            df = self.source.get()
+            if not isinstance(df, pd.DataFrame):
+                self.vd.fail(f"LazyPandasSheet: source is {a_type(df)}"
+                             " (expected a DataFrame)")
+
+            self._pdr_source = self.source
+            self.source = df
+
         # we're already in an async thread
         PandasSheet.reload.__wrapped__(self)
 
 
-def a_type(thing):
-    """
-    Return the name of the type of 'thing', with the correct
-    English indefinite article prepended and some of Python's
-    cryptic abbreviations expanded, e.g. 'a string', 'an integer'.
-
-    If 'thing' is already a type object, uses the name of 'thing'
-    itself, not the name of type(thing) (which would always be "type").
-    """
-    if isinstance(thing, type):
-        name = thing.__name__
-    else:
-        name = type(thing).__name__
-
-    name = ({
-        "str":           "string",
-        "bool":          "boolean",
-        "int":           "integer",
-        "float":         "real number",
-        "dict":          "dictionary",
-        "None":          "absent value",
-        "NoneType":      "absent value",
-    }).get(name, name)
-
-    return ("an " if name[0] in "aeiouAEIOU" else "a ") + name
-
-
 def sheet_class_for_obj(vd, stem, key, source):
-    # if we got here, the pdr library is available
-    # this is temporary until an official API is added
-    from pdr.loaders.dispatch import pointer_to_loader
-
+    # note: Data.type_of() hasn't made it into an official PDR release yet
     try:
-        ldr = type(pointer_to_loader(key, source)).__name__.removeprefix("Read")
+        expected_type = source.type_of(key)
+    except FileNotFoundError as e:
+        vd.warning(
+            f"{stem}/{key}: data unavailable (need file {e.filename})"
+        )
+        return None
+    except TypeError as e:
+        vd.warning(
+            f"{stem}/{key}: PDR cannot load this object ({e})"
+        )
+        return None
     except Exception as e:
         vd.warning(
-            f"{stem}/{key}: cannot determine appropriate sheet type: {e}"
+            f"{stem}/{key}: unable to determine expected object type ({e})"
         )
         return None
 
-    match ldr:
-        case "Table":
+    match expected_type.__name__:
+        case "DataFrame":
             return LazyPandasSheet
 
-        case "Text":
-            return LazyTextSheet
-
-        case "Array" | "CompressedImage" | "Image":
+        case "ndarray":
             return LazyNpySheet
 
-        case "Header" | "Trivial" | "TBD":
-            vd.warning(
-                f"{stem}: skipping {key} with sheet type {ldr}"
-            )
-            return None
-
-        # In this case, guess that we're going to get a table if the
-        # HDU's metadata has a "COLUMNS" key, and an image if it doesn't.
-        case "Fits":
-            md = source.metadata[key]
-            return LazyPandasSheet if "COLUMNS" in md else LazyNpySheet
+        case "str":
+            return LazyTextSheet
 
         case other:
+            # the other possibilities should only come up for headers,
+            # which we skip anyway
             vd.warning(
-                f"{stem}/{key}: not yet implemented: sheet type {other}"
+                f"{stem}: skipping {key} with object type {other}"
             )
             return None
+
+
+def filtered_keys(source):
+    # it _seems_ like we don't need to weed out "header" objects in PDS4
+    is_pds4 = source.standard == "PDS4"
+    return [
+        key for key in sorted(source.keys())
+        if key.upper() not in ("LABEL", "HEADER") and (
+            is_pds4 or (
+                key in source.metadata
+                and "HEADER_TYPE" not in source.metadata[key]
+            )
+        )
+    ]
 
 
 class PDSMetaSheet(TableSheet):
@@ -138,15 +187,7 @@ class PDSMetaSheet(TableSheet):
     ]
 
     def beforeLoad(self):
-        for key in sorted(self.source.keys()):
-            # Skip all "header" objects; they are covered by the "label" sheet.
-            if (
-                key.upper() in ("LABEL", "HEADER")
-                or key not in self.source.metadata
-                or "HEADER_TYPE" in self.source.metadata[key]
-            ):
-                continue
-
+        for key in filtered_keys(self.source):
             if self.source._target_path(key) is None:
                 self.vd.warning(
                     f"data not available for {self._pdr_stem}/{key}"
@@ -171,7 +212,7 @@ class PDSMetaSheet(TableSheet):
 
     def iterload(self):
         def il_recursive(md, base):
-            if hasattr(md, 'items'):
+            if hasattr(md, "items"):
                 for k, v in md.items():
                     yield from il_recursive(v, f"{base}.{k}")
             elif isinstance(md, list):
@@ -180,6 +221,7 @@ class PDSMetaSheet(TableSheet):
             else:
                 yield (base, md)
 
+        yield ("standard", self.source.standard)
         for k, v in self.source.metadata.items():
             yield from il_recursive(v, k)
 
@@ -207,12 +249,6 @@ def open_pdr(vd, p):
         # There seems to be a bug in visidata.Path where the .name property
         # omits suffixes (that's supposed to be .stem).
         key = p.parts[-1]
-
-    if data.standard == "PDS4":
-        vd.fail(
-            f"sorry, not implemented: "
-            f"loading {stem}, whose label format is {data.standard}"
-        )
 
     if key is None:
         return PDSMetaSheet(
