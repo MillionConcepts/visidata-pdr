@@ -2,10 +2,8 @@
 Load tabular data into VisiData using PDR
 """
 
-from pathlib import Path
-
 from visidata import (
-    VisiData, Column, Progress, TableSheet, TextSheet, asyncthread
+    VisiData, Column, TableSheet, TextSheet, asyncthread
 )
 from visidata.loaders._pandas import PandasSheet
 from visidata.loaders.npy import NpySheet
@@ -127,9 +125,10 @@ def sheet_class_for_obj(vd, stem, key, source):
 
         case other:
             vd.warning(
-                f"{stem}/{key}: not yet implemented: sheet type {ldr}"
+                f"{stem}/{key}: not yet implemented: sheet type {other}"
             )
             return None
+
 
 class PDSMetaSheet(TableSheet):
     rowtype = "label metadata"  # rowdef: (str, any)
