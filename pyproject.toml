@@ -28,8 +28,9 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
     # currently we need an unreleased PDR due to use of Data.type_of
-    "pdr @ git+https://github.com/MillionConcepts/pdr@develop",
-    "visidata >= 3.3"
+    # request all extras that expand the set of files PDR can load
+    "pdr[fits,pillow,pvl] @ git+https://github.com/MillionConcepts/pdr@develop",
+    "visidata >= 3.3",
 ]
 
 [project.urls]
