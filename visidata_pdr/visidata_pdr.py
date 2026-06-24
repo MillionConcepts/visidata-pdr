@@ -125,7 +125,7 @@ class LazyPandasSheet(PandasSheet):
 
 
 def sheet_class_for_obj(vd, stem, key, source):
-    # note: Data.type_of() hasn't made it into an official PDR release yet
+    # note: Data.type_of() is why we need pdr 1.4.4 or later
     try:
         expected_type = source.type_of(key)
     except FileNotFoundError as e:

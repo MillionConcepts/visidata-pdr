@@ -4,7 +4,7 @@
 
 [project]
 name          = "visidata_pdr"
-version       = "0.0.1"
+version       = "0.1.0"
 description   = "Load tabular data understood by PDR into VisiData"
 readme        = "README.md"
 license       = "BSD-3-Clause"
@@ -15,7 +15,7 @@ authors = [
 ]
 
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Environment :: Console :: Curses",
     "Operating System :: OS Independent",
@@ -27,9 +27,7 @@ classifiers = [
 
 requires-python = ">=3.11"
 dependencies = [
-    # currently we need an unreleased PDR due to use of Data.type_of
-    # request all extras that expand the set of files PDR can load
-    "pdr[fits,pillow,pvl] @ git+https://github.com/MillionConcepts/pdr@develop",
+    "pdr[fits,pillow,pvl] >= 1.4.4",
     "visidata >= 3.3",
 ]
 
