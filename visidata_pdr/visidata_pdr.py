@@ -234,3 +234,29 @@ def open_pdr(vd, p):
         source=data,
         _pdr_stem=stem,
     )
+
+
+@VisiData.api
+def guess_pdr(vd, p):
+    pdr = vd.importExternal("pdr")
+
+    # It's easiest to just go ahead and try to open it.  PDR already
+    # tries pretty hard to do minimal work at open time.
+    try:
+        data = pdr.open(p)
+    except Exception:
+        return None
+
+    if data.standard in ("PDS3", "PDS4"):
+        likelihood = 10
+    elif data.standard == "FITS":
+        likelihood = 7  # leave room for a dedicated FITS loader
+    else:
+        likelihood = 3
+
+    # If we could pass `data` from here to the *open function*,
+    # that would be worth doing, but AFAICT we can't do that.
+    return {
+        "filetype": "pdr",
+        "_likelihood": likelihood
+    }
