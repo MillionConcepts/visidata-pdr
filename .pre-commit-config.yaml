@@ -8,8 +8,11 @@ repos:
     -   id: check-illegal-windows-names
     -   id: check-merge-conflict
     -   id: mixed-line-ending
+        exclude: '^sample_data/'
     -   id: trailing-whitespace
+        exclude: '^sample_data/'
     -   id: end-of-file-fixer
+        exclude: '^sample_data/'
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
   rev: v0.15.15

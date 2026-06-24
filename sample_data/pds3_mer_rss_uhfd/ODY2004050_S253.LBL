@@ -1,0 +1,108 @@
+PDS_VERSION_ID               = PDS3                                           
+RECORD_TYPE                  = STREAM                                         
+RECORD_BYTES                 = 32 /* Largest actual record in the file */     
+FILE_RECORDS                 = 231                                            
+^SPREADSHEET                 = "ODY2004050_S253.CSV"                          
+DATA_SET_ID                  = "MER1-M-RSS-1-EDR-V1.0"                        
+TARGET_NAME                  = "MARS"                                         
+INSTRUMENT_HOST_NAME         = "MARS EXPLORATION ROVER 1"                     
+INSTRUMENT_NAME              = "RADIO SCIENCE SUBSYSTEM"                      
+INSTRUMENT_ID                = "RSS"                                          
+PRODUCER_ID                  = "DSN"                                          
+PRODUCT_CREATION_TIME        = 2004-02-20T00:00:00                            
+PRODUCT_TYPE                 = UHFD                                           
+PRODUCT_ID                   = "ODY2004050_S253.CSV"                          
+ORIGINAL_PRODUCT_ID          = "ody2004050_S253.asc"                          
+START_TIME                   = 2004-02-19T12:05:17                            
+STOP_TIME                    = 2004-02-19T12:24:28                            
+HARDWARE_MODEL_ID            = "C/TT-505"                                     
+DESCRIPTION                  = "Ultra-High Frequency Doppler (UHFD)           
+    files are the results of measurements made by the UHF radio               
+    system on the Mars Odyssey Orbiter (ODY). The ODY UHF radio system        
+    uses a reference frequency near 401 MHz. The reference frequency is       
+    multiplied by the ratio 160/147 to generate a signal near 437 MHz         
+    which can be used to transmit commands to vehicles on Mars                
+    such as MER 1 and MER 2, and receives signals back at 401 MHz.            
+    The ODY UHF radio measures the difference in frequency between            
+    the reference and received carrier frequencies which                      
+    provides a (Doppler) measure of the relative velocity of the              
+    surface vehicle. Each UHFD file contains ASCII records with               
+    4 fields; commas are used to separate fields within                       
+    each record. The first field of each record is the time of the            
+    measurement in seconds past the J2000 reference epoch                     
+    (which is 2000-01-01T12:00:00 UTC).                                       
+    The second field of each record is an integer flag which indicates        
+    the reference frequency. The third field is an integer flag               
+    which indicates data quality (0 indicates valid, 1 indicates bad);        
+    the fourth field is the frequency difference measurement in Hz.           
+                                                                              
+    The measurement is the absolute value of the difference of the received   
+    frequency minus the reference frequency. For Mars Odyssey, the only       
+    available reference frequency is 401.584625 MHz. The frequency of the     
+    signal transmitted by ODY is a fixed multiple, 160/147, of the            
+    reference frequency. For the MER radio operating in coherent mode,        
+    the received frequency is multiplied by a fixed multiple, 147/160, to     
+    generate the signal transmitted back to the orbiter.                      
+    For example, when ODY is directly overhead the rover, the signal          
+    received from MER and the ODY reference frequency are the same and        
+    the measurement is zero, indicating zero velocity of the rover relative to
+    ODY along the line of sight to the orbiter. In general, the absolute value
+    of the velocity along the line of sight is (to first order in v/c)        
+           v = (c/2) *F(measurement)/F(reference)                             
+    where c is the speed of light.                                            
+                                                                              
+    The size of each record is variable; the maximum record size              
+    consists of 14 characters for the TIME field, 1 character for the         
+    LO FLAG field, one character from the DATA QUALITY field, 11 characters   
+    for the FREQUENCY field, three single-character delimiters (comma),       
+    plus ASCII carriage-return and line-feed at end of each record."          
+                                                                              
+OBJECT                         = SPREADSHEET                                  
+  ROWS                         = 227                                          
+  ROW_BYTES                    = 32 /* Largest actual record in the file */   
+  FIELDS                       = 4                                            
+  FIELD_DELIMITER              = "COMMA"                                      
+                                                                              
+  OBJECT             = FIELD                                                  
+    NAME             = "TIME"                                                 
+    DATA_TYPE        = "ASCII_REAL"                                           
+    FIELD_NUMBER     = 1                                                      
+    BYTES            = 14 /* Maximum item bytes */                            
+    DESCRIPTION = "The time of the measurement in seconds past the            
+    J2000 reference epoch (which is 2000-01-01T12:00:00 UTC)."                
+  END_OBJECT         = FIELD                                                  
+                                                                              
+  OBJECT             = FIELD                                                  
+    NAME             = "LO FLAG"                                              
+    DATA_TYPE        = "ASCII_INTEGER"                                        
+    BYTES            = 1                                                      
+    FIELD_NUMBER     = 2                                                      
+    DESCRIPTION = "Flag which indicates                                       
+    the reference local oscillator (LO) frequency against which the           
+    frequency of the received carrier is measured. For ODY, the               
+    flag is always '1' since only one reference frequency is available."      
+  END_OBJECT         = FIELD                                                  
+                                                                              
+  OBJECT           = FIELD                                                    
+    NAME             = "DATA QUALITY"                                         
+    DATA_TYPE        = "ASCII_INTEGER"                                        
+    BYTES            = 1                                                      
+    FIELD_NUMBER     = 3                                                      
+    DESCRIPTION = "Flag which indicates data quality                          
+    (0 indicates valid, 1 indicates bad). Data may be flagged as 'bad' due    
+     either to telemetry indicating a bad receiver condition or to telemetry  
+     integrity checks indicating errors in telemetry record from ODY          
+     to the DSN containing the measurement data."                             
+  END_OBJECT       = FIELD                                                    
+                                                                              
+  OBJECT           = FIELD                                                    
+    NAME             = "FREQUENCY"                                            
+    DATA_TYPE        = "ASCII_REAL"                                           
+    BYTES            = 11 /* Maximum item bytes */                            
+    FIELD_NUMBER     = 4                                                      
+    DESCRIPTION = "Frequency difference measurement in Hz."                   
+  END_OBJECT       = FIELD                                                    
+                                                                              
+END_OBJECT                   = SPREADSHEET                                    
+                                                                              
+END                                                                           

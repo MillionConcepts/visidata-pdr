@@ -1,0 +1,8 @@
+#!vd -p
+{"longname": "open-file", "input": "sample_data/pds3_mer_rss_uhfd/ODY2004050_S253.LBL"}
+{"longname": "columns-sheet", "sheet": "ODY2004050_S253/SPREADSHEET"}
+{"longname": "edit-cell",     "sheet": "ODY2004050_S253/SPREADSHEET_columns", "col": "fmtstr", "row": 0, "input": "{:0.4f}"}
+{"longname": "edit-cell",     "sheet": "ODY2004050_S253/SPREADSHEET_columns", "col": "fmtstr", "row": 3, "input": "{:0.6f}"}
+{"longname": "edit-cell",     "sheet": "ODY2004050_S253/SPREADSHEET_columns", "col": "width", "row": 0, "input": "16"}
+{"longname": "edit-cell",     "sheet": "ODY2004050_S253/SPREADSHEET_columns", "col": "width", "row": 3, "input": "15"}
+{"longname": "jump-prev"}
