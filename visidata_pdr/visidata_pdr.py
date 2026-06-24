@@ -18,24 +18,22 @@ def a_type(thing):
     If 'thing' is already a type object, uses the name of 'thing'
     itself, not the name of type(thing) (which would always be "type").
     """
-    if isinstance(thing, type):
-        name = thing.__name__
-    else:
-        name = type(thing).__name__
-
-    name = ({
-        "str":           "string",
-        "bool":          "boolean",
-        "int":           "integer",
-        "float":         "real number",
-        "dict":          "dictionary",
-        "ndarray":       "numpy array",
-        "NoneType":      "None",
-    }).get(name, name)
+    if not isinstance(thing, type):
+        thing = type(thing)
+    name = thing.__name__
 
     # None is unique and therefore doesn't take any articles at all.
-    if name == "None":
-        return name
+    if name in ("None", "NoneType"):
+        return "None"
+
+    name = ({
+        "bool":    "boolean",
+        "dict":    "dictionary",
+        "float":   "real number",
+        "int":     "integer",
+        "ndarray": "numpy array",
+        "str":     "string",
+    }).get(name, name)
 
     # Technically, "an" should be used if the word begins with a vowel
     # *sound*, whether or not it begins with a vowel *letter*.
@@ -43,7 +41,7 @@ def a_type(thing):
     # one example, it should be "a numpy array" but "an ndarray".
     # Approximating based on the usual vowel letters is Good Enough For Now.
     # (The rule is also accent-dependent, but that almost exclusively affects
-    # words beginning with H and I can't think of any that would come up.)
+    # words beginning with H, and I can't think of any that would come up.)
     return ("an " if name[0] in "aeiouAEIOU" else "a ") + name
 
 
@@ -107,7 +105,7 @@ class LazyPandasSheet(PandasSheet):
         """
         pd = self.vd.importExternal("pandas")
         if isinstance(dtype, pd.Series):
-            return super().dtype_to_type(dtype.dtype)
+            dtype = dtype.dtype
         return super().dtype_to_type(dtype)
 
     @asyncthread
