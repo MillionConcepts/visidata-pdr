@@ -227,38 +227,10 @@ class PDSMetaSheet(TableSheet):
 @VisiData.api
 def open_pdr(vd, p):
     pdr = vd.importExternal("pdr")
-
-    try:
-        # vd -f pdr accepts either an actual pathname of something that's
-        # readable by PDR, in which case everything in that file is read
-        # (as multiple sheets, if necessary)...
-        data = pdr.open(p)
-        stem = p.base_stem
-        key = None
-
-    except NotADirectoryError:
-        # ... or an actual pathname of something that's readable by PDR
-        # with "/sub-object-name" tacked on the end, in which case only that
-        # specific sub-object is loaded.  When the user does that, the initial
-        # call to pdr.open will fail with an ENOTDIR error.
-        pp = p.parent
-        data = pdr.open(pp)
-        stem = pp.base_stem
-        # There seems to be a bug in visidata.Path where the .name property
-        # omits suffixes (that's supposed to be .stem).
-        key = p.parts[-1]
-
-    if key is None:
-        return PDSMetaSheet(
-            f"{stem}/metadata",
-            source=data,
-            _pdr_stem=stem,
-        )
-    else:
-        SheetClass = sheet_class_for_obj(vd, stem, key, data)
-        if SheetClass is None:
-            vd.fail(f"{stem}/{key}: loading failed due to earlier errors")
-        return SheetClass(
-            f"{stem}/{key}",
-            source=PDRSource(data, key),
-        )
+    data = pdr.open(p)
+    stem = p.base_stem
+    return PDSMetaSheet(
+        f"{stem}/metadata",
+        source=data,
+        _pdr_stem=stem,
+    )
