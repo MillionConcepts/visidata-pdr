@@ -1,0 +1,4 @@
+include sample_data/**/*.CSV
+include sample_data/**/*.LBL
+include tests/*.vdj
+include tests/golden/*.tsv
