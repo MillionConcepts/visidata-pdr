@@ -28,17 +28,42 @@ not recommended, as this will not install PDR.
 ## Usage
 
 After installing the plugin and its dependencies, the `pdr` loader can
-read any data file that `pdr.open()` would understand.  For example,
-suppose you have downloaded the [Mars Global Surveyor][]’s [Thermal
-Emission Spectrometer data set][] and you want to look at the first
-batch of data (MY24; 1999-02-28T21):
+open any PDS product `pdr.open()` understands.  It cannot retrieve a
+product’s files from the network; you must have all the files locally
+available before you begin.  (It is easy to forget to download
+external table format files, or to download only some of the data
+files associated with a label.)
+
+Loading PDS data into VisiData is probably most useful for tables of
+records, but you _can_ also load images; these will be presented as a
+matrix of the image pixels’ values.
+
+For example, suppose you have downloaded the [Mars Global Surveyor][]’s
+[Thermal Emission Spectrometer data set][] and you want to look at the
+first batch of data (MY24; 1999-02-28T21):
 
 ```sh
 vd -f pdr TES_COD_IR_MY24_Ls090_Ls120.xml
 ```
 
-It would also work to specify the `.dat` file.  Either way, both the
-data and the label must be available.
+[Mars Global Surveyor]: https://atmos.nmsu.edu/data_and_services/atmospheres_data/MARS/mgs.html
+[Thermal Emission Spectrometer data set]: https://atmos.nmsu.edu/data_and_services/atmospheres_data/MARS/montabone.html
+
+It would also work to specify the `.dat` file for this product.
+Either way, the loader will create one sheet for the label itself, and
+another sheet for each data object described by the label (whether or
+not it is stored in the files on the command line).  The sheet for the
+label itself will be selected initially; use standard VisiData sheet
+navigation to reach other sheets.
+
+Data sheets are lazily loaded; each actual data file will not be
+opened until the sheet for one of its data objects is selected.
+Therefore, if you are missing some of the data files or external
+format files associated with a label, you won’t be notified until you
+try to access one of the sheets for which data is missing.  However,
+if you _start_ by telling VisiData to load one of the data files
+associated with a label, VisiData core requires that that file exists,
+before giving the `pdr` loader a chance to look at it.
 
 The plugin does provide a “guess” function that tries to identify
 files that `pdr.open` would understand, but its guesses are treated as
@@ -47,16 +72,15 @@ formats, so, for example, omitting the `-f pdr` from the above command
 will cause `TES_COD_IR_MY24_Ls090_Ls120.xml` to be loaded as a generic
 XML file, not a PDS4 label.  (We hope to improve this in the future.)
 
-The `pdr` loader will create one sheet for the label itself, and
-another sheet for each data object described by the label.  The
-sheet for the label itself will be selected initially; use standard
-VisiData sheet navigation to reach other sheets.  Data sheets
-are not loaded until the first time they are selected.  Images will
-be presented as 2D matrices.
+## Comments, suggestions, bug reports, etc.
 
 We are actively looking for feedback on the user experience of this
 plugin.  Please file all commentary, suggestions, etc. as GitHub
 issues: https://github.com/MillionConcepts/visidata-pdr/issues
 
-[Mars Global Surveyor]: https://atmos.nmsu.edu/data_and_services/atmospheres_data/MARS/mgs.html
-[Thermal Emission Spectrometer data set]: https://atmos.nmsu.edu/data_and_services/atmospheres_data/MARS/montabone.html
+## Licensing
+
+Copyright 2026, Million Concepts LLC.
+
+Redistribution and use are permitted under the terms of the 3-clause
+BSD license; see [`LICENSE.md`](./LICENSE.md) for exact terms.
