@@ -4,7 +4,7 @@
 
 [project]
 name          = "visidata_pdr"
-version       = "0.1.0"
+version       = "0.1.1"
 description   = "Load tabular data understood by PDR into VisiData"
 readme        = "README.md"
 license       = "BSD-3-Clause"
