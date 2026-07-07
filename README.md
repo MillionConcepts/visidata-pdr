@@ -84,3 +84,5 @@ Copyright 2026, Million Concepts LLC.
 
 Redistribution and use are permitted under the terms of the 3-clause
 BSD license; see [`LICENSE.md`](./LICENSE.md) for exact terms.
+
+This project was developed with support from NASA HPOSS Grant 80NSSC26K0194.
